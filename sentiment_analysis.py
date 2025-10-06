@@ -3,6 +3,10 @@ import nltk
 import json
 import random
 import pandas as pd
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+import string
 
 """ download nltk packages (first time only)
 
@@ -14,6 +18,21 @@ import pandas as pd
     nltk.download('punkt_tab', force=True)
 
 """
+
+stop_words = set(stopwords.words('english'))
+lemmatizer = WordNetLemmatizer()
+
+""" Text preprocessing pipeline
+
+"""
+
+def preprocess_text(text):
+    tokens = word_tokenize(text)
+    filtered_tokens = [w.lower() for w in tokens if w.isalpha()
+                       and w.lower() not in stop_words]
+
+    lemmas = [lemmatizer.lemmatize(token) for token in filtered_tokens]
+    return ' '.join(lemmas)
 
 with open('positive_data.json', 'r') as f:
     positive_data = json.load(f)
@@ -30,6 +49,10 @@ random.shuffle(data)
 
 # Visualize and count label distribution for data balance
 df = pd.DataFrame(data)
-print(df['label'].value_counts())
+# print(df['label'].value_counts())
+
 
 df.head()
+
+df['processed_text'] = df['sentence'].apply(preprocess_text)
+print(df[['sentence', 'processed_text']].head())

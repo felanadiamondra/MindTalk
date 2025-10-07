@@ -7,6 +7,8 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 import string
+from sklearn.feature_extraction.text import CountVectorizer
+
 
 """ download nltk packages (first time only)
 
@@ -34,25 +36,37 @@ def preprocess_text(text):
     lemmas = [lemmatizer.lemmatize(token) for token in filtered_tokens]
     return ' '.join(lemmas)
 
-with open('positive_data.json', 'r') as f:
-    positive_data = json.load(f)
+# with open('positive_data.json', 'r') as f:
+#     positive_data = json.load(f)
 
-with open('negative_data.json', 'r') as f:
-    negative_data = json.load(f)
+# with open('negative_data.json', 'r') as f:
+#     negative_data = json.load(f)
 
-data = positive_data + negative_data
+# data = positive_data + negative_data
 
 # Combines and shuffles data for randomized training and testing splits, preventing bias in model training.
-random.shuffle(data)
+# random.shuffle(data)
 
 # print(f"Total samples loaded: {len(data)}")
 
 # Visualize and count label distribution for data balance
-df = pd.DataFrame(data)
+# df = pd.DataFrame(data)
 # print(df['label'].value_counts())
 
 
+df = pd.read_csv('https://raw.githubusercontent.com/pycaret/pycaret/master/datasets/amazon.csv')
+
 df.head()
 
-df['processed_text'] = df['sentence'].apply(preprocess_text)
-print(df[['sentence', 'processed_text']].head())
+df['reviewText'] = df['reviewText'].apply(preprocess_text)
+df
+
+# print(df[['sentence', 'processed_text']].head())
+
+# df
+
+# vectorizer = CountVectorizer()
+# X = vectorizer.fit_transform(df['processed_text'])
+# y = df['label'].map({'positive': 1, 'negative': 0}).values
+
+# print(f"Feature matrix shape: {X.shape}")

@@ -63,7 +63,19 @@ df
 
 analyzer = SentimentIntensityAnalyzer()
 
-# print(df[['sentence', 'processed_text']].head())
+def get_sentiment(text):
+
+    scores = analyzer.polarity_scores(text)
+
+    sentiment = 1 if scores['pos'] > 0 else 0
+
+    return sentiment
+
+df['sentiment'] = df['sentence'].apply(get_sentiment)
+df.head(10)
+
+print(df[['sentence', 'processed_text']].head(10))
+print(df[['sentence', 'sentiment']].head(10))
 
 # vectorizer = CountVectorizer()
 # X = vectorizer.fit_transform(df['processed_text'])

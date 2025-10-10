@@ -1,42 +1,43 @@
+import streamlit as st
 import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
 
-def sentiment_analysis(sentence):
-    # Use the SentimentIntensityAnalyzer to compute the sentiment scores
-    sentiment = SentimentIntensityAnalyzer().polarity_scores(sentence)
+# Download NLTK data if not already done
+nltk.download('vader_lexicon')
 
-    # Categorize the sentiment as positive, negative, or neutral based on the compound score
-    if sentiment['compound'] >= 0.05:
-        sentiment_category = "Positive"
-    elif sentiment['compound'] <= -0.05:
-        sentiment_category = "Negative"
+# Initialize the sentiment analyzer
+sia = SentimentIntensityAnalyzer()
+
+# Streamlit app
+st.set_page_config(page_title="Feelings Detector", page_icon="💬")
+st.title("💬 Sentiment Analyzer")
+st.write("Tell me how you feel, and I’ll give you some friendly feedback 🌈")
+
+# User input
+user_input = st.text_area("What's on your mind today?")
+
+if st.button("Analyze"):
+    if user_input.strip():
+        # Get sentiment scores
+        sentiment = sia.polarity_scores(user_input)
+        compound = sentiment['compound']
+
+        # Determine sentiment category
+        if compound >= 0.05:
+            category = "😊 Positive"
+            feedback = "That’s great! Keep up the good vibes ✨"
+        elif compound <= -0.05:
+            category = "😞 Negative"
+            feedback = "Sorry to hear that. Take a deep breath, everything will be okay 💛"
+        else:
+            category = "😐 Neutral"
+            feedback = "Seems you’re feeling okay. Maybe a little music or a walk would brighten your day 🎶"
+
+        # Display results
+        st.subheader("Your Sentiment Result:")
+        st.write(f"**Sentiment:** {category}")
+        st.progress((compound + 1) / 2)
+        st.write(f"**Feedback:** {feedback}")
+
     else:
-        sentiment_category = "Neutral"
-
-    return sentiment, sentiment_category
-
-
-# Test the sentiment analysis on some example sentences
-sentence = "I love this youtube video! You Rock."
-sentiment, sentiment_category = sentiment_analysis(sentence)
-print("Sentence:", sentence)
-print("Compound score:", sentiment['compound'])
-print("Sentiment:", sentiment_category)
-
-sentence = "I hate this youtube video! You're Terrible."
-sentiment, sentiment_category = sentiment_analysis(sentence)
-print("Sentence:", sentence)
-print("Compound score:", sentiment['compound'])
-print("Sentiment:", sentiment_category)
-
-sentence = "I feel so-so about your youtube videos."
-sentiment, sentiment_category = sentiment_analysis(sentence)
-print("Sentence:", sentence)
-print("Compound score:", sentiment['compound'])
-print("Sentiment:", sentiment_category)
-
-sentence = "I feel so-so about your boring youtube videos."
-sentiment, sentiment_category = sentiment_analysis(sentence)
-print("Sentence:", sentence)
-print("Compound score:", sentiment['compound'])
-print("Sentiment:", sentiment_category)
+        st.warning("Please enter a sentence before clicking Analyze.")

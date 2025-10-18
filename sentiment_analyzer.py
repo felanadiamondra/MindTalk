@@ -2,35 +2,63 @@ import streamlit as st
 import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
 from datetime import datetime
+import pandas as pd
 
 # Télécharger le lexique de sentiment si nécessaire
 nltk.download('vader_lexicon')
-
-# Initialiser l'analyseur de sentiments
 sia = SentimentIntensityAnalyzer()
+st.set_page_config(page_title="MindTalk", page_icon="💬", layout="centered")
 
-# Configuration de la page
-st.set_page_config(page_title="Feelings Companion", page_icon="💬", layout="centered")
+# Message de bienvenue
+hour = datetime.now().hour
+if hour < 12:
+    st.write("☀️ Bonjour ! Prêt(e) pour une nouvelle journée ?")
+elif hour < 18:
+    st.write("🌤 Bon après-midi ! Comment ça va ?")
+else:
+    st.write("🌙 Bonsoir ! Une petite réflexion sur ta journée ?")
 
-# --- Titre ---
-st.title("💬 Feelings Companion")
+st.title("💬 MindTalk")
 st.write("Prends un moment pour toi et partage ce que tu ressens. Je vais t’apporter un petit mot réconfortant 🌈")
 
-# --- Zone de saisie ---
+# Zone de texte
 user_input = st.text_area("Comment te sens-tu aujourd’hui ?", placeholder="Écris ton ressenti ici...")
 
 # Historique
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# --- Bouton d’analyse ---
-if st.button("Analyser mon humeur"):
+# --- Boutons côte à côte ---
+col1, col2, col3 = st.columns([2, 1, 1])
+
+with col1:
+    analyze_button = st.button("Analyser mon humeur")
+with col2:
+    clear_button = st.button("🗑 Vider l'historique")
+with col3:
+    # Télécharger uniquement si historique non vide
+    if st.session_state.history:
+        st.download_button(
+            label="📥 Télécharger",
+            data=pd.DataFrame(st.session_state.history).to_csv(index=False),
+            file_name="mindtalk_history.csv",
+            mime="text/csv"
+        )
+    else:
+        st.button("📥 Télécharger", disabled=True)
+
+# Vider l'historique
+if clear_button:
+    st.session_state.history = []
+    st.success("Historique vidé avec succès !")
+
+# Analyse de l’humeur
+if analyze_button:
     if user_input.strip():
         sentiment = sia.polarity_scores(user_input)
         compound = sentiment['compound']
         current_time = datetime.now().strftime("%d/%m/%Y %H:%M")
 
-        # Détermination du sentiment avec textes humains
         if compound >= 0.05:
             category = "😊 Positif"
             feedback = "Super ! C’est génial de te sentir bien. Profite de cette belle énergie ✨"
@@ -44,7 +72,7 @@ if st.button("Analyser mon humeur"):
             feedback = "Une journée calme et équilibrée 🍃. Parfois, se sentir tranquille est déjà un vrai cadeau."
             st.info(feedback)
 
-        # Feedback personnalisé rapide
+        # Feedback rapide
         text = user_input.lower()
         if "tired" in text or "fatigué" in text:
             st.write("💤 Tu sembles fatigué. Prends un petit moment pour toi.")
@@ -52,23 +80,37 @@ if st.button("Analyser mon humeur"):
             st.write("🌞 Ça fait plaisir de te voir heureux(se) ! Continue à sourire 💕")
         elif "angry" in text or "énervé" in text:
             st.write("😤 Respire un bon coup et prends du recul. Ça ira mieux ensuite.")
+        elif "stress" in text or "stressé" in text:
+            st.write("🧘 Prends 2 minutes pour respirer profondément. Inspire… expire…")
+        elif "triste" in text or "sad" in text:
+            st.write("🌱 Écris une chose qui t’a fait sourire aujourd’hui, même petite.")
 
-        # Barre de progression
         st.progress((compound + 1) / 2)
+        st.write(f"Sentiment global : {category}")
 
-        # Enregistrer dans l’historique avec date/heure
         st.session_state.history.append({
             "text": user_input,
             "category": category,
             "feedback": feedback,
-            "time": current_time
+            "time": current_time,
+            "compound": compound
         })
     else:
         st.warning("Écris quelque chose avant d’analyser ton sentiment 😉")
 
-# --- Historique des analyses ---
+# Résumé statistique
 if st.session_state.history:
-    st.subheader("🕓 Nos dernieres interactions")
-    for entry in reversed(st.session_state.history[-5:]):
-        # Design strictement conservé, juste ajout de la date
-        st.markdown(f"**🗣️ {entry['text']}**  →  {entry['category']}  <br>💡 _{entry['feedback']}_  <br>🕒 {entry['time']}", unsafe_allow_html=True)
+    st.subheader("📊 Résumé de vos humeurs")
+    pos = sum(1 for h in st.session_state.history if "😊 Positif" in h["category"])
+    neg = sum(1 for h in st.session_state.history if "😞 Négatif" in h["category"])
+    neu = sum(1 for h in st.session_state.history if "😐 Neutre" in h["category"])
+    st.write(f"😊 Positif : {pos} | 😞 Négatif : {neg} | 😐 Neutre : {neu}")
+
+# Historique des interactions
+if st.session_state.history:
+    st.subheader("🕓 Dernières interactions")
+    for entry in reversed(st.session_state.history[-10:]):
+        st.markdown(
+            f"**🗣️ {entry['text']}**  →  {entry['category']}  <br>💡 _{entry['feedback']}_  <br>🕒 {entry['time']}",
+            unsafe_allow_html=True
+        )

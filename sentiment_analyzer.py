@@ -3,11 +3,34 @@ import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
 from datetime import datetime
 import pandas as pd
+import random
 
 # Télécharger le lexique de sentiment si nécessaire
 nltk.download('vader_lexicon')
 sia = SentimentIntensityAnalyzer()
 st.set_page_config(page_title="MindTalk", page_icon="💬", layout="centered")
+
+# --- Variations de feedback ---
+positive_responses = [
+    "🌞 Super ! C’est génial de te sentir bien. Profite de cette belle énergie ✨",
+    "💪 Garde cette belle humeur, elle est contagieuse 😄",
+    "🌸 Quelle joie de lire ça ! Continue à répandre ces bonnes ondes 🌈",
+    "😄 Excellent ! Garde le sourire, il illumine ta journée ☀️"
+]
+
+negative_responses = [
+    "💛 Je comprends, les jours difficiles font partie de la vie. Prends soin de toi 💫",
+    "🌧 Même les nuages passent… demain sera plus doux 🌤",
+    "🤗 Courage, un petit pas à la fois. Tu vas t’en sortir 💕",
+    "💬 Tu as bien fait d’en parler. Lâcher un peu, c’est déjà avancer 🌱"
+]
+
+neutral_responses = [
+    "🍃 Une journée calme et équilibrée, c’est déjà précieux.",
+    "🕊 Parfois, ne rien ressentir de particulier, c’est un signe d’apaisement.",
+    "🌼 Une journée neutre, c’est peut-être le calme avant de belles choses 🌈",
+    "☕ Un moment tranquille, parfait pour se recentrer un peu."
+]
 
 # Message de bienvenue
 hour = datetime.now().hour
@@ -61,15 +84,15 @@ if analyze_button:
 
         if compound >= 0.05:
             category = "😊 Positif"
-            feedback = "Super ! C’est génial de te sentir bien. Profite de cette belle énergie ✨"
+            feedback = random.choice(positive_responses)
             st.success(feedback)
         elif compound <= -0.05:
             category = "😞 Négatif"
-            feedback = "Je comprends, les jours difficiles font partie de la vie 💛 Prends soin de toi et respire doucement."
+            feedback = random.choice(negative_responses)
             st.error(feedback)
         else:
             category = "😐 Neutre"
-            feedback = "Une journée calme et équilibrée 🍃. Parfois, se sentir tranquille est déjà un vrai cadeau."
+            feedback = random.choice(neutral_responses)
             st.info(feedback)
 
         # Feedback rapide

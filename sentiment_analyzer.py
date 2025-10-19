@@ -199,12 +199,12 @@ if st.session_state.history:
             unsafe_allow_html=True
         )
 
-# --- Plan d’action et activités ---
-if plan:
-    st.markdown("### 🧭 Plan d’action du jour")
-    st.write(plan)
-
-if activities:
-    st.markdown("### 🎯 Activités que tu peux faire")
-    for activity in activities:
-        st.write(f"- {activity}")
+# --- Plan d’action et activités avec UX expandable ---
+if plan or activities:
+    with st.expander("🧭 Voir le plan d’action et les activités du jour", expanded=True):
+        if plan:
+            st.markdown(f"💡 {plan}")
+        if activities:
+            st.markdown("### 🎯 Activités suggérées")
+            for activity in activities:
+                st.write(f"- {activity}")

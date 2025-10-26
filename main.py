@@ -4,6 +4,7 @@ from nltk.sentiment import SentimentIntensityAnalyzer
 from datetime import datetime
 import pandas as pd
 import random
+import unicodedata
 
 # Télécharger le lexique de sentiment si nécessaire
 nltk.download('vader_lexicon')
@@ -81,6 +82,20 @@ action_plans = {
     }
 }
 
+emotion_keywords = {
+    "fatigue": ["fatigue", "fatiguer", "tired", "epuise", "creve", "lasse", "extenuer"],
+    "joie": ["happy", "heureux", "contente", "joyeux", "satisfait", "ravi"],
+    "colere": ["angry", "enerve", "furieux", "vexe", "agace"],
+    "stress": ["stress", "stresse", "angoisse", "pression", "tendu"],
+    "tristesse": ["triste", "sad", "deprime", "chagrin", "morose", "melancolique"]
+}
+
+
+def normalize_text(text):
+    text = unicodedata.normalize('NFD', text).encode('ascii', 'ignore').decode('utf-8')
+    return text
+
+
 # --- Message de bienvenue ---
 hour = datetime.now().hour
 if hour < 12:
@@ -145,15 +160,17 @@ if analyze_button:
 
         # Feedback rapide contextuel
         text = user_input.lower()
-        if "tired" in text or "fatigué" in text:
+        normalize_text(text)
+
+        if any(word in text for word in emotion_keywords["fatigue"]):
             st.write("💤 Tu sembles fatigué. Prends un petit moment pour toi.")
-        elif "happy" in text or "heureux" in text:
+        elif any(word in text for word in emotion_keywords["joie"]):
             st.write("🌞 Ça fait plaisir de te voir heureux(se) ! Continue à sourire 💕")
-        elif "angry" in text or "énervé" in text:
+        elif any(word in text for word in emotion_keywords["colere"]):
             st.write("😤 Respire un bon coup et prends du recul. Ça ira mieux ensuite.")
-        elif "stress" in text or "stressé" in text:
+        elif any(word in text for word in emotion_keywords["stress"]):
             st.write("🧘 Prends 2 minutes pour respirer profondément. Inspire… expire…")
-        elif "triste" in text or "sad" in text:
+        elif any(word in text for word in emotion_keywords["tristesse"]):
             st.write("🌱 Écris une chose qui t’a fait sourire aujourd’hui, même petite.")
 
         # Barre de progression

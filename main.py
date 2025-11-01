@@ -5,6 +5,7 @@ from datetime import datetime
 import pandas as pd
 import random
 import unicodedata
+import time
 
 # --- Configuration ---
 nltk.download('vader_lexicon')
@@ -227,8 +228,11 @@ with main_col:
 # --------------------------- 💡 COLONNE DROITE ---------------------------
 with side_col:
     st.markdown("---")
-    st.subheader("🧭 Plan d’action & Activités")
+    st.subheader("Plan d’action & Activités")
     if plan or activities:
+        with st.spinner("Wait a minute 🧭", show_time=False):
+            time.sleep(1)
+
         if plan:
             st.markdown(f"<div style='background-color:{BG_GREY}; padding:10px; border-radius:10px;'>💡 {plan}</div>", unsafe_allow_html=True)
         if activities:

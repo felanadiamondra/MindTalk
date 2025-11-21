@@ -227,7 +227,7 @@ with main_col:
 #  RIGHT COLUMN 
 with side_col:
     st.markdown("---")
-    st.subheader("Action Plan & Activities")
+    st.subheader("Plan and activities")
     if plan or activities:
         with st.spinner("Wait a moment 🧭", show_time=False):
             time.sleep(1)

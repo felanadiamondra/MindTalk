@@ -12,7 +12,7 @@ nltk.download('vader_lexicon')
 sia = SentimentIntensityAnalyzer()
 st.set_page_config(page_title="MindTalk", page_icon="💬", layout="wide")
 
-# --- Thème pastel ---
+# --- Pastel theme ---
 PRIMARY_COLOR = "#9B6BA7"
 SECONDARY_COLOR = "#4D87A6"
 BG_LIGHT = "#FAF7F2"
@@ -24,129 +24,129 @@ mood_key = ""
 plan = ""
 activities = []
 
-# --- Listes de feedback ---
+# --- Feedback lists ---
 positive_responses = [
-    "🌞 Super ! C’est génial de te sentir bien. Profite de cette belle énergie ✨",
-    "💪 Garde cette belle humeur, elle est contagieuse 😄",
-    "🌸 Quelle joie de lire ça ! Continue à répandre ces bonnes ondes 🌈",
-    "😄 Excellent ! Garde le sourire, il illumine ta journée ☀️"
+    "🌞 Great! It’s wonderful to see you feeling good ✨",
+    "💪 Keep that good mood going — it’s contagious! 😄",
+    "🌸 So happy to read this! Keep spreading your good vibes 🌈",
+    "😄 Awesome! Your smile lights up your day ☀️"
 ]
 
 negative_responses = [
-    "💛 Je comprends, les jours difficiles font partie de la vie. Prends soin de toi 💫",
-    "🌧 Même les nuages passent… demain sera plus doux 🌤",
-    "🤗 Courage, un petit pas à la fois. Tu vas t’en sortir 💕",
-    "💬 Tu as bien fait d’en parler. Lâcher un peu, c’est déjà avancer 🌱"
+    "💛 I understand — tough days happen. Take care of yourself 💫",
+    "🌧 Clouds pass… tomorrow will be kinder 🌤",
+    "🤗 Stay strong, one small step at a time 💕",
+    "💬 You did well opening up. Letting it out is already progress 🌱"
 ]
 
 neutral_responses = [
-    "🍃 Une journée calme et équilibrée, c’est déjà précieux.",
-    "🕊 Parfois, ne rien ressentir de particulier, c’est un signe d’apaisement.",
-    "🌼 Une journée neutre, c’est peut-être le calme avant de belles choses 🌈",
-    "☕ Un moment tranquille, parfait pour se recentrer un peu."
+    "🍃 A calm and balanced day is already valuable.",
+    "🕊 Sometimes not feeling anything special is a sign of peace.",
+    "🌼 A neutral day might be the calm before something beautiful 🌈",
+    "☕ A quiet moment is perfect for recentring."
 ]
 
-# --- Plans et activités ---
+# --- Plans and activities ---
 action_plans = {
     "positive": {
         "plan": [
-            "Continue à nourrir ton énergie positive en partageant un moment avec quelqu’un que tu aimes 💕",
-            "Note trois choses qui t’ont rendu(e) heureux(se) aujourd’hui ✨",
-            "Fais quelque chose que tu adores : musique, danse, cuisine 🥗"
+            "Keep nurturing your positive energy by sharing a moment with someone you love 💕",
+            "Write down three things that made you happy today ✨",
+            "Do something you love: music, dancing, cooking 🥗"
         ],
         "activities": [
-            "📖 Lire un livre inspirant",
-            "🎶 Écouter ta playlist préférée",
-            "🚶 Sortir prendre l’air ou marcher 10 minutes",
-            "💌 Envoyer un message gentil à quelqu’un"
+            "📖 Read an inspiring book",
+            "🎶 Listen to your favorite playlist",
+            "🚶 Take a 10-minute walk outside",
+            "💌 Send a kind message to someone"
         ]
     },
     "negative": {
         "plan": [
-            "Prends un moment pour respirer profondément et te recentrer 🧘",
-            "Essaie de mettre des mots sur ce que tu ressens 💭",
-            "Souviens-toi : toutes les émotions sont temporaires 💛"
+            "Take a moment to breathe deeply and refocus 🧘",
+            "Try to put your feelings into words 💭",
+            "Remember: emotions are temporary 💛"
         ],
         "activities": [
-            "🎧 Écouter une musique douce",
-            "✍️ Écrire dans un journal ce que tu ressens",
-            "🌿 Faire une promenade au calme",
-            "📞 Appeler un ami de confiance"
+            "🎧 Listen to something calm",
+            "✍️ Write in a journal",
+            "🌿 Take a peaceful walk",
+            "📞 Call a trusted friend"
         ]
     },
     "neutral": {
         "plan": [
-            "Profite de cette stabilité pour te ressourcer 🍃",
-            "Essaye une activité nouvelle pour stimuler ta créativité 🎨",
-            "Planifie quelque chose qui te fait plaisir pour demain 🌅"
+            "Use this stability to recharge 🍃",
+            "Try a new activity to boost your creativity 🎨",
+            "Plan something pleasant for tomorrow 🌅"
         ],
         "activities": [
-            "🧩 Faire un puzzle ou un jeu de logique",
-            "📺 Regarder un film inspirant",
-            "☕ Prendre un moment de calme sans téléphone",
-            "🧘 Essayer une courte méditation guidée"
+            "🧩 Do a puzzle or logic game",
+            "📺 Watch an inspiring movie",
+            "☕ Enjoy a quiet moment without your phone",
+            "🧘 Try a short guided meditation"
         ]
     }
 }
 
 emotion_keywords = {
-    "fatigue": ["fatigue", "fatiguer", "tired", "epuise", "creve", "lasse", "extenuer"],
-    "joie": ["happy", "heureux", "contente", "joyeux", "satisfait", "ravi"],
-    "colere": ["angry", "enerve", "furieux", "vexe", "agace"],
-    "stress": ["stress", "stresse", "angoisse", "pression", "tendu"],
-    "tristesse": ["triste", "sad", "deprime", "chagrin", "morose", "melancolique"]
+    "fatigue": ["fatigue", "tired", "exhausted", "drained", "sleepy"],
+    "joy": ["happy", "joyful", "satisfied", "glad", "excited"],
+    "anger": ["angry", "mad", "furious", "upset", "annoyed"],
+    "stress": ["stress", "stressed", "anxious", "pressure", "tense"],
+    "sadness": ["sad", "down", "depressed", "blue", "melancholic"]
 }
 
 def normalize_text(text):
     text = unicodedata.normalize('NFD', text).encode('ascii', 'ignore').decode('utf-8')
     return text
 
-# --- En-tête ---
+# --- Greeting ---
 hour = datetime.now().hour
 if hour < 12:
-    greeting = "☀️ Bonjour ! Prêt(e) pour une nouvelle journée ?"
+    greeting = "☀️ Good morning! Ready for a new day?"
 elif hour < 18:
-    greeting = "🌤 Bon après-midi ! Comment ça va ?"
+    greeting = "🌤 Good afternoon! How are you feeling?"
 else:
-    greeting = "🌙 Bonsoir ! Une petite réflexion sur ta journée ?"
+    greeting = "🌙 Good evening! Want to reflect on your day?"
 
 st.markdown(f"<h2 style='color:{PRIMARY_COLOR}; text-align:center'>{greeting}</h2>", unsafe_allow_html=True)
 st.markdown(f"<h1 style='text-align:center; color:{SECONDARY_COLOR}'>💬 MindTalk</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:#555'>Prends un moment pour toi et partage ce que tu ressens 🌈</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:#555'>Take a moment for yourself and share how you feel 🌈</p>", unsafe_allow_html=True)
 
-# --- Séparation layout (2 colonnes principales) ---
+# --- Layout (2 main columns) ---
 main_col, side_col = st.columns([2, 1])
 
-# --------------------------- 🧠 COLONNE GAUCHE ---------------------------
+# LEFT COLUMN 
 with main_col:
     st.markdown("---")
-    st.subheader("📝 Ton ressenti du jour")
-    user_input = st.text_area("Exprime-toi librement :", placeholder="Écris ton ressenti ici...", height=120)
+    st.subheader("📝 Your mood today")
+    user_input = st.text_area("Express yourself freely:", placeholder="Write your thoughts here...", height=120)
 
     if "history" not in st.session_state:
         st.session_state.history = []
 
     col_btn1, col_btn2, col_btn3 = st.columns([2, 1, 1])
     with col_btn1:
-        analyze_button = st.button("💬 Analyser mon humeur")
+        analyze_button = st.button("💬 Analyze my mood")
     with col_btn2:
-        clear_button = st.button("🗑 Vider l'historique")
+        clear_button = st.button("🗑 Clear history")
     with col_btn3:
         if st.session_state.history:
             st.download_button(
-                label="📥 Télécharger",
+                label="📥 Download",
                 data=pd.DataFrame(st.session_state.history).to_csv(index=False),
                 file_name="mindtalk_history.csv",
                 mime="text/csv"
             )
         else:
-            st.button("📥 Télécharger", disabled=True)
+            st.button("📥 Download", disabled=True)
 
     if clear_button:
         st.session_state.history = []
-        st.success("Historique vidé avec succès ! ✨")
+        st.success("History cleared successfully! ✨")
 
-    # --- Analyse principale ---
+    # --- Main analysis ---
     if analyze_button:
         if user_input.strip():
             sentiment = sia.polarity_scores(user_input)
@@ -154,40 +154,39 @@ with main_col:
             current_time = datetime.now().strftime("%d/%m/%Y %H:%M")
 
             if compound >= 0.05:
-                category = "😊 Positif"
+                category = "😊 Positive"
                 feedback = random.choice(positive_responses)
                 st.success(feedback)
                 mood_key = "positive"
             elif compound <= -0.05:
-                category = "😞 Négatif"
+                category = "😞 Negative"
                 feedback = random.choice(negative_responses)
                 st.error(feedback)
                 mood_key = "negative"
             else:
-                category = "😐 Neutre"
+                category = "😐 Neutral"
                 feedback = random.choice(neutral_responses)
                 st.info(feedback)
                 mood_key = "neutral"
 
-            # Barre et ressenti contextuel
             st.progress((compound + 1) / 2)
-            st.caption(f"**Sentiment global : {category}**")
+            st.caption(f"**Overall sentiment: {category}**")
 
             text = normalize_text(user_input.lower())
             for key, words in emotion_keywords.items():
                 if any(w in text for w in words):
                     if key == "fatigue":
-                        st.write("💤 Tu sembles fatigué. Prends un moment pour toi.")
-                    elif key == "joie":
-                        st.write("🌞 Ça fait plaisir de te voir heureux(se) ! Continue à sourire 💕")
-                    elif key == "colere":
-                        st.write("😤 Respire un bon coup et prends du recul. Ça ira mieux ensuite.")
+                        st.write("💤 You seem tired. Take a moment for yourself.")
+                    elif key == "joy":
+                        st.write("🌞 So glad to see you happy! Keep smiling 💕")
+                    elif key == "anger":
+                        st.write("😤 Take a deep breath and step back. It will get better.")
                     elif key == "stress":
-                        st.write("🧘 Inspire profondément... expire... tout va bien 🌿")
-                    elif key == "tristesse":
-                        st.write("🌱 Écris une chose qui t’a fait sourire aujourd’hui.")
+                        st.write("🧘 Inhale… exhale… You got this 🌿")
+                    elif key == "sadness":
+                        st.write("🌱 Try writing down something that made you smile today.")
 
-            # Génération plan & activités
+            # Generate plan and activities
             plan = random.choice(action_plans[mood_key]["plan"])
             activities = random.sample(action_plans[mood_key]["activities"], 2)
 
@@ -199,19 +198,19 @@ with main_col:
                 "compound": compound
             })
         else:
-            st.warning("✏️ Écris quelque chose avant d’analyser ton sentiment !")
+            st.warning("✏️ Please write something before analyzing your mood!")
 
-    # --- Résumé & Historique ---
+    # --- Summary and History ---
     if st.session_state.history:
         st.markdown("---")
-        st.subheader("📊 Statistiques d’humeur")
-        pos = sum(1 for h in st.session_state.history if "😊 Positif" in h["category"])
-        neg = sum(1 for h in st.session_state.history if "😞 Négatif" in h["category"])
-        neu = sum(1 for h in st.session_state.history if "😐 Neutre" in h["category"])
-        st.write(f"**😊 Positif : {pos} | 😞 Négatif : {neg} | 😐 Neutre : {neu}**")
+        st.subheader("📊 Mood Statistics")
+        pos = sum(1 for h in st.session_state.history if "Positive" in h["category"])
+        neg = sum(1 for h in st.session_state.history if "Negative" in h["category"])
+        neu = sum(1 for h in st.session_state.history if "Neutral" in h["category"])
+        st.write(f"**😊 Positive: {pos} | 😞 Negative: {neg} | 😐 Neutral: {neu}**")
 
         st.markdown("---")
-        st.subheader("🕓 Historique récent")
+        st.subheader("🕓 Recent History")
         for entry in reversed(st.session_state.history[-5:]):
             st.markdown(
                 f"""
@@ -225,19 +224,19 @@ with main_col:
                 unsafe_allow_html=True
             )
 
-# --------------------------- 💡 COLONNE DROITE ---------------------------
+#  RIGHT COLUMN 
 with side_col:
     st.markdown("---")
-    st.subheader("Plan d’action & Activités")
+    st.subheader("Action Plan & Activities")
     if plan or activities:
-        with st.spinner("Wait a minute 🧭", show_time=False):
+        with st.spinner("Wait a moment 🧭", show_time=False):
             time.sleep(1)
 
         if plan:
             st.markdown(f"<div style='background-color:{BG_GREY}; padding:10px; border-radius:10px;'>💡 {plan}</div>", unsafe_allow_html=True)
         if activities:
-            st.markdown("### 🎯 Activités suggérées")
+            st.markdown("### 🎯 Suggested activities")
             for activity in activities:
                 st.markdown(f"- {activity}")
     else:
-        st.info("Analyse ton humeur pour découvrir des activités adaptées 💬")
+        st.info("Analyze your mood to discover adapted activities 💬")

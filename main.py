@@ -1,5 +1,4 @@
 import random
-import time
 import unicodedata
 from datetime import datetime
 
@@ -10,80 +9,116 @@ import streamlit as st
 from nltk.sentiment import SentimentIntensityAnalyzer
 
 # --------------------------------------------------
-# 1. Configuration & Custom CSS
+# Page config
 # --------------------------------------------------
 st.set_page_config(
-    page_title="MindTalk — Mood & Mind Tracker",
+    page_title="MindTalk",
     page_icon="💬",
     layout="wide",
-    initial_sidebar_state="collapsed",
 )
 
+# --------------------------------------------------
+# Theme
+# --------------------------------------------------
+PRIMARY = "#2F4B6E"      # slate blue
+ACCENT = "#6B5B95"       # muted violet
+TEXT = "#1F2933"
+MUTED = "#6B7785"
+BORDER = "#E3E8EF"
+SURFACE = "#F7F9FC"
+
+MOODS = {
+    "positive": {"label": "Positive", "color": "#2E7D5B", "icon": ":material/sentiment_satisfied:"},
+    "negative": {"label": "Negative", "color": "#B4474B", "icon": ":material/sentiment_dissatisfied:"},
+    "neutral": {"label": "Neutral", "color": "#5B6B7F", "icon": ":material/sentiment_neutral:"},
+}
+
 st.markdown(
-    """
-<style>
-    .hero-container {
-        background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
-        padding: 2rem;
-        border-radius: 16px;
-        color: #FFFFFF !important;
-        text-align: center;
-        margin-bottom: 2rem;
-        box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.3);
-    }
-    .hero-title {
-        font-size: 2.25rem;
-        font-weight: 800;
-        margin-bottom: 0.25rem;
-        color: #FFFFFF !important;
-    }
-    .hero-subtitle {
-        font-size: 1rem;
-        color: rgba(255, 255, 255, 0.9) !important;
-    }
-    .custom-card {
-        background-color: var(--secondary-background-color);
-        color: var(--text-color);
-        padding: 1.25rem;
-        border-radius: 12px;
-        border: 1px solid rgba(128, 128, 128, 0.2);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        margin-bottom: 1rem;
-    }
-    .history-card {
-        background-color: var(--secondary-background-color);
-        color: var(--text-color);
-        padding: 1rem;
-        border-radius: 10px;
-        border-left: 4px solid #6366F1;
-        border-top: 1px solid rgba(128, 128, 128, 0.15);
-        border-right: 1px solid rgba(128, 128, 128, 0.15);
-        border-bottom: 1px solid rgba(128, 128, 128, 0.15);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        margin-bottom: 0.75rem;
-    }
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-</style>
-""",
+    f"""
+    <style>
+        html, body, [class*="css"] {{ color: {TEXT}; }}
+        .block-container {{ padding-top: 2rem; max-width: 1200px; }}
+        
+        /* Purple Header Styling */
+        .mt-header {{
+            background: linear-gradient(135deg, {ACCENT} 0%, {PRIMARY} 100%);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 1.5rem;
+            color: #FFFFFF !important;
+            box-shadow: 0 4px 15px rgba(107, 91, 149, 0.25);
+        }}
+        .mt-title {{
+            font-size: 2rem; font-weight: 700; color: #FFFFFF !important;
+            margin: 0; letter-spacing: -0.01em; display: flex; align-items: center; gap: 0.5rem;
+        }}
+        .mt-sub {{ color: rgba(255, 255, 255, 0.85) !important; font-size: 0.95rem; margin-top: 0.25rem; }}
+        .mt-greeting {{
+            color: rgba(255, 255, 255, 0.95) !important; font-size: 0.8rem; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.08em;
+        }}
+        
+        .mt-entry {{
+            background: {SURFACE};
+            border: 1px solid {BORDER};
+            border-left-width: 4px;
+            border-radius: 8px;
+            padding: 0.8rem 1rem;
+            margin-bottom: 0.6rem;
+        }}
+        .mt-entry .meta {{ color: {MUTED}; font-size: 0.8rem; }}
+        .mt-badge {{
+            display: inline-block; font-size: 0.75rem; font-weight: 600;
+            padding: 0.1rem 0.55rem; border-radius: 999px; color: #fff;
+        }}
+        .mt-plan {{
+            background: {SURFACE}; border: 1px solid {BORDER};
+            border-left: 4px solid {ACCENT};
+            border-radius: 8px; padding: 0.9rem 1rem; color: {TEXT};
+        }}
+        .mt-note {{ color: {MUTED}; font-size: 0.78rem; margin-top: 1.5rem; }}
+        div.stButton > button, div.stDownloadButton > button {{
+            border-radius: 6px; font-weight: 500;
+        }}
+    </style>
+    """,
     unsafe_allow_html=True,
 )
 
+
 # --------------------------------------------------
-# 2. Advanced Multi-lingual Sentiment & Emotion Engine
+# Safe NLTK initialization
 # --------------------------------------------------
-@st.cache_resource(show_spinner=False)
+@st.cache_resource
 def load_sentiment_analyzer():
     try:
         nltk.download("vader_lexicon", quiet=True)
         return SentimentIntensityAnalyzer()
     except Exception:
-        st.error("⚠️ Impossible d'initialiser le moteur NLTK.")
-        st.stop()
+        return None
+
 
 sia = load_sentiment_analyzer()
+if sia is None:
+    st.error("The sentiment engine could not be loaded.", icon=":material/error:")
+    st.stop()
 
-# French Sentiment & Emotion Dictionary
+# --------------------------------------------------
+# Session state
+# --------------------------------------------------
+st.session_state.setdefault("history", [])
+st.session_state.setdefault("plan", None)
+st.session_state.setdefault("activities", [])
+st.session_state.setdefault("user_input_val", "")
+
+
+# --------------------------------------------------
+# Utils & Hybrid Sentiment Analysis (FR + EN + Negations)
+# --------------------------------------------------
+def normalize_text(text: str) -> str:
+    return unicodedata.normalize("NFD", text).encode("ascii", "ignore").decode("utf-8")
+
+
 FRENCH_LEXICON = {
     "positive": [
         "heureux", "heureuse", "joie", "content", "contente", "super", "genial", "génial",
@@ -98,11 +133,11 @@ FRENCH_LEXICON = {
     ],
     "anger": [
         "colere", "colère", "enervé", "énervé", "énervée", "faché", "fâché", "fâchée", "furieux",
-        "furieuse", "rage", "haine", "agacé", "agacée", "irrité", "irritée", "injuste"
+        "rage", "haine", "agacé", "agacée", "irrité", "irritée", "injuste"
     ],
     "stress": [
         "stress", "stresse", "stressé", "stressée", "anxieux", "anxieuse", "pression", "panique",
-        "overdose", "submergé", "submergée", "dépassé", "dépassée", "tendu", "tendue"
+        "submergé", "submergée", "dépassé", "dépassée", "tendu", "tendue"
     ],
     "fatigue": [
         "fatigue", "fatigué", "fatiguée", "épuisé", "épuisée", "crevé", "crevée", "draine",
@@ -110,371 +145,320 @@ FRENCH_LEXICON = {
     ]
 }
 
-INTENSIFIERS = ["très", "tres", "trop", "tellement", "vraiment", "extrêmement", "extremement", "super"]
+NEGATIONS = ["pas", "non", "plus", "jamais", "aucun", "sans", "not", "no", "never"]
+INTENSIFIERS = ["très", "tres", "trop", "tellement", "vraiment", "extrêmement", "very", "really"]
 
-def analyze_hybrid_sentiment(text: str):
-    """
-    Combines VADER (English) with a rich custom French NLP Lexicon & Intensity Calculator
-    """
-    normalized = unicodedata.normalize("NFD", text.lower()).encode("ascii", "ignore").decode("utf-8")
+
+def analyze_hybrid_sentiment(text: str) -> float:
+    normalized = normalize_text(text.lower())
     words = normalized.split()
     
-    # 1. English VADER Score
-    vader_scores = sia.polarity_scores(text)
-    vader_compound = vader_scores["compound"]
+    pos_count = 0.0
+    neg_count = 0.0
     
-    # 2. French Lexicon Score & Emotion Detector
-    pos_count = 0
-    neg_count = 0
-    emotion_scores = {"Tristesse": 0, "Joie": 0, "Colère": 0, "Stress": 0, "Fatigue": 0}
-    
-    multiplier = 1.0
     for i, word in enumerate(words):
-        # Check intensifiers (ex: "très triste")
-        if word in INTENSIFIERS:
-            multiplier = 1.5
+        is_negated = i > 0 and words[i-1] in NEGATIONS
+        multiplier = 1.5 if (i > 0 and words[i-1] in INTENSIFIERS) else 1.0
+
+        if is_negated and word in ["mal", "mauvais"]:
+            pos_count += 1.5 * multiplier
             continue
-            
+        elif is_negated and word in ["triste", "déprimé", "horrible", "bad", "sad"]:
+            pos_count += 1.0 * multiplier
+            continue
+        elif is_negated and word in FRENCH_LEXICON["positive"]:
+            neg_count += 1.0 * multiplier
+            continue
+
         if word in FRENCH_LEXICON["positive"]:
-            pos_count += 1 * multiplier
-            emotion_scores["Joie"] += 1 * multiplier
+            pos_count += 1.0 * multiplier
         elif word in FRENCH_LEXICON["negative"]:
-            neg_count += 1 * multiplier
-            emotion_scores["Tristesse"] += 1 * multiplier
-            
-        if word in FRENCH_LEXICON["anger"]:
-            emotion_scores["Colère"] += 1 * multiplier
-        if word in FRENCH_LEXICON["stress"]:
-            emotion_scores["Stress"] += 1 * multiplier
-        if word in FRENCH_LEXICON["fatigue"]:
-            emotion_scores["Fatigue"] += 1 * multiplier
-            
-        multiplier = 1.0 # reset multiplier after applied
+            neg_count += 1.0 * multiplier
 
-    # Check capitalization (ALL CAPS = Higher Intensity)
-    if text.isupper() and len(text) > 5:
-        pos_count *= 1.3
-        neg_count *= 1.3
-
-    # Check Exclamation / Question marks
-    if "!" in text or "?" in text:
-        pos_count *= 1.1
-        neg_count *= 1.1
-
-    # Hybrid Compound Score Calculation (-1.0 to +1.0)
     fr_total = pos_count + neg_count
     if fr_total > 0:
-        fr_compound = (pos_count - neg_count) / fr_total
-    else:
-        fr_compound = 0.0
+        return (pos_count - neg_count) / fr_total
+    
+    return sia.polarity_scores(text)["compound"]
 
-    # Fusion des scores VADER + Lexique Français
-    if fr_total > 0:
-        final_compound = fr_compound
-    else:
-        final_compound = vader_compound
-
-    # Category Determination
-    if final_compound >= 0.15:
-        category, emoji, mood_key = "Positif", "😊", "positive"
-    elif final_compound <= -0.15:
-        category, emoji, mood_key = "Négatif", "😞", "negative"
-    else:
-        category, emoji, mood_key = "Neutre", "😐", "neutral"
-
-    # Top Emotion Selection
-    top_emotion = max(emotion_scores, key=emotion_scores.get)
-    if emotion_scores[top_emotion] == 0:
-        top_emotion = "Équilibré"
-
-    return {
-        "compound": round(final_compound, 2),
-        "category": category,
-        "emoji": emoji,
-        "mood_key": mood_key,
-        "top_emotion": top_emotion,
-        "emotion_scores": emotion_scores
-    }
 
 # --------------------------------------------------
-# 3. Session State
+# Content
 # --------------------------------------------------
-if "history" not in st.session_state:
-    st.session_state.history = []
-if "last_analysis" not in st.session_state:
-    st.session_state.last_analysis = None
-if "user_text_input" not in st.session_state:
-    st.session_state.user_text_input = ""
-if "completed_activities" not in st.session_state:
-    st.session_state.completed_activities = set()
+feedback_messages = {
+    "positive": [
+        "Your message reflects a positive state of mind. Keep building on it.",
+        "A good dynamic today. Take a moment to recognise what is working.",
+        "Positive signals detected. This is a good time to consolidate your momentum.",
+        "Great energy detected! Channel this momentum into what matters to you.",
+    ],
+    "negative": [
+        "Difficult moments happen. Acknowledging them is a constructive first step.",
+        "Your message suggests some tension. Take it one step at a time.",
+        "Expressing what you feel is already progress. Be patient with yourself.",
+        "Be gentle with yourself today. Give yourself room to rest and recharge.",
+    ],
+    "neutral": [
+        "A balanced day is valuable in itself.",
+        "Your state appears stable. A good opportunity to recharge.",
+        "A calm period can be a good time to reflect and plan.",
+        "Neutral days provide a steady baseline to organize your thoughts.",
+    ],
+}
 
-# --------------------------------------------------
-# 4. Action Plans & Prompts
-# --------------------------------------------------
 action_plans = {
     "positive": {
-        "plan": "Partagez cette énergie positive avec votre entourage 💕",
+        "plan": [
+            "Share your positive energy with someone close to you.",
+            "Note three inspiring wins or moments from today.",
+            "Dedicate time to a creative activity or project you genuinely enjoy.",
+            "Consolidate your progress and plan a rewarding milestone.",
+        ],
         "activities": [
-            "📖 Lire un chapitre d'un livre inspirant",
-            "🎶 Écouter votre playlist préférée",
-            "🚶 Faire une marche consciente de 15 min",
-            "💌 Envoyer un message de gratitude à un ami",
+            ("menu_book", "Read a few pages of an inspiring book or article"),
+            ("headphones", "Listen to an uplifting mood playlist"),
+            ("directions_walk", "Take a mindful 15-minute outdoor walk"),
+            ("mail", "Send a warm message of appreciation to a friend"),
+            ("celebration", "Take 5 minutes to celebrate a recent personal success"),
+            ("self_improvement", "Write down your top goals for the upcoming week"),
+            ("palette", "Engage in a short creative drawing or writing session"),
         ],
     },
     "negative": {
-        "plan": "Prenez une pause, relâchez les épaules et respirez profondément 🧘",
+        "plan": [
+            "Pause, drop your shoulders, and breathe slowly for a few minutes.",
+            "Write your thoughts down on paper to gain objective distance.",
+            "Remember that emotional states are temporary and constantly evolving.",
+            "Lower immediate expectations and focus solely on essential needs.",
+        ],
         "activities": [
-            "🎧 Écouter des sons relaxants d'ambiance",
-            "✍️ Écrire librement dans un journal (5 min)",
-            "🌿 Sortir prendre l'air frais quelques instants",
-            "📞 Appeler ou envoyer un message à un proche de confiance",
+            ("headphones", "Listen to calm ambient sounds or nature acoustics"),
+            ("edit_note", "Journal freely for 5 minutes without filter"),
+            ("park", "Step outside to get fresh air and sunshine"),
+            ("call", "Reach out to someone you trust"),
+            ("spa", "Practice box breathing (4s inhale, 4s hold, 4s exhale)"),
+            ("local_cafe", "Enjoy a warm beverage in total calm"),
+            ("bed", "Allow yourself a silent rest or 15-minute nap"),
         ],
     },
     "neutral": {
-        "plan": "Profitez de ce calme pour recharger vos batteries 🍃",
+        "plan": [
+            "Use this calm, balanced period to restore baseline energy.",
+            "Try a creative or manual activity without any pressure.",
+            "Plan something pleasant and organized for tomorrow.",
+            "Use this steady baseline to organize your space and thoughts.",
+        ],
         "activities": [
-            "🧩 Faire une petite énigme ou un casse-tête",
-            "📺 Regarder une vidéo courte et inspirante",
-            "☕ Déguster une boisson chaude en pleine conscience",
-            "🧘 Faire 3 minutes de méditation guidée",
+            ("extension", "Do a puzzle or short brain-teaser"),
+            ("play_circle", "Watch an uplifting or educational video"),
+            ("coffee", "Take a quiet, screen-free break"),
+            ("self_improvement", "Try a short 5-minute grounded meditation"),
+            ("cleaning_services", "Tidy or declutter your immediate desk or workspace"),
+            ("menu_book", "Read a chapter of an informative book"),
+            ("checklist", "Set one realistic intention for the rest of the day"),
         ],
     },
 }
 
-quick_prompts = [
-    "Je me sens vraiment triste parce que...",
-    "Aujourd'hui je suis très motivé et...",
-    "Je ressens beaucoup de stress avec...",
-    "Je suis épuisé et j'ai besoin de...",
-]
+emotion_keywords = {
+    "fatigue": ["fatigue", "tired", "exhausted", "drained", "sleepy", "epuise", "creve"],
+    "joy": ["happy", "joyful", "glad", "excited", "heureux", "content", "joie"],
+    "anger": ["angry", "mad", "furious", "annoyed", "colere", "enerve", "fache"],
+    "stress": ["stress", "stressed", "anxious", "tense", "stresse", "anxieux", "pression"],
+    "sadness": ["sad", "down", "blue", "melancholic", "triste", "deprime", "solitude"],
+}
 
-# Header
+# --------------------------------------------------
+# Header with Purple Accent Style & Restored Cloud Icon
+# --------------------------------------------------
 hour = datetime.now().hour
-greeting_prefix = "Bonjour" if hour < 12 else "Bon après-midi" if hour < 18 else "Bonsoir"
+greeting = "Good morning" if hour < 12 else "Good afternoon" if hour < 18 else "Good evening"
 
 st.markdown(
     f"""
-    <div class="hero-container">
-        <div class="hero-title">💬 MindTalk</div>
-        <div class="hero-subtitle">{greeting_prefix} ! Prenez un instant pour faire le point sur votre état d'esprit.</div>
+    <div class="mt-header">
+        <div class="mt-greeting">{greeting}</div>
+        <div class="mt-title">💬 MindTalk</div>
+        <div class="mt-sub">A short daily check-in on your mood.</div>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
-# --------------------------------------------------
-# 5. Core Layout
-# --------------------------------------------------
-main_col, side_col = st.columns([2.2, 1], gap="large")
+main_col, side_col = st.columns([2, 1], gap="large")
 
+# ==================================================
+# LEFT COLUMN
+# ==================================================
 with main_col:
-    st.subheader("💬 Exprimer votre ressenti")
+    st.subheader("Mood check-in", anchor=False)
+    
+    # Text input area with clear option
+    user_input = st.text_area(
+        "How are you feeling today?",
+        value=st.session_state.user_input_val,
+        placeholder="Describe your day, your thoughts, or how you feel...",
+        height=130,
+        max_chars=1000,
+        key="current_user_input"
+    )
 
-    st.caption("⚡ **Amorces rapides d'expression :**")
-    chip_cols = st.columns(len(quick_prompts))
-    for idx, prompt in enumerate(quick_prompts):
-        if chip_cols[idx].button(prompt, key=f"prompt_{idx}", use_container_width=True):
-            st.session_state.user_text_input = prompt + " "
+    auto_clear = st.checkbox("Auto-clear description box after analysis", value=False)
 
-    with st.form(key="mood_form", clear_on_submit=False):
-        user_input = st.text_area(
-            label="Qu'avez-vous sur le cœur ou en tête ?",
-            value=st.session_state.user_text_input,
-            placeholder="Exemple : Je me sens tellement triste et fatigué aujourd'hui...",
-            height=120,
-            max_chars=1000,
+    col1, col2, col3 = st.columns([2, 1, 1])
+    analyze = col1.button("Analyse my mood", icon=":material/psychology:", type="primary", use_container_width=True)
+    clear = col2.button("Clear", icon=":material/delete:", use_container_width=True)
+
+    if st.session_state.history:
+        col3.download_button(
+            "Export",
+            pd.DataFrame(st.session_state.history).to_csv(index=False),
+            "mindtalk_history.csv",
+            "text/csv",
+            icon=":material/download:",
+            use_container_width=True,
         )
-        
-        c_left, c_right = st.columns([2, 1])
-        with c_left:
-            submit_button = st.form_submit_button("✨ Analyser mon humeur", type="primary", use_container_width=True)
-        with c_right:
-            clear_input = st.form_submit_button("🧹 Effacer le texte", use_container_width=True)
+    else:
+        col3.button("Export", icon=":material/download:", disabled=True, use_container_width=True)
 
-    if clear_input:
-        st.session_state.user_text_input = ""
+    if clear:
+        st.session_state.history.clear()
+        st.session_state.plan = None
+        st.session_state.activities = []
+        st.session_state.user_input_val = ""
+        st.toast("History cleared.", icon=":material/check_circle:")
         st.rerun()
 
-    if submit_button:
+    # ---------------- Analysis ----------------
+    if analyze:
         if not user_input.strip():
-            st.warning("⚠️ Veuillez écrire quelques mots avant de lancer l'analyse.")
+            st.warning("Please write a few words first.", icon=":material/edit:")
         else:
-            with st.status("Analyse sémantique hybride en cours...", expanded=False) as status:
-                time.sleep(0.2)
-                
-                # Hybrid NLP Model Call
-                res_nlp = analyze_hybrid_sentiment(user_input)
+            try:
+                compound = analyze_hybrid_sentiment(user_input)
                 timestamp = datetime.now().strftime("%d/%m/%Y %H:%M")
 
-                plan = action_plans[res_nlp["mood_key"]]["plan"]
-                activities = action_plans[res_nlp["mood_key"]]["activities"]
+                if compound >= 0.05:
+                    mood_key = "positive"
+                elif compound <= -0.05:
+                    mood_key = "negative"
+                else:
+                    mood_key = "neutral"
 
-                analysis_result = {
-                    "id": len(st.session_state.history) + 1,
-                    "text": user_input,
-                    "category": res_nlp["category"],
-                    "emoji": res_nlp["emoji"],
-                    "compound": res_nlp["compound"],
-                    "emotion": res_nlp["top_emotion"],
-                    "emotion_scores": res_nlp["emotion_scores"],
-                    "plan": plan,
-                    "activities": activities,
-                    "time": timestamp,
-                }
+                mood = MOODS[mood_key]
+                feedback = random.choice(feedback_messages[mood_key])
 
-                st.session_state.last_analysis = analysis_result
-                st.session_state.history.append(analysis_result)
-                status.update(label="Analyse terminée !", state="complete")
-                st.toast("Ressenti analysé et enregistré !", icon="🧠")
+                with st.container(border=True):
+                    st.markdown(f"**{mood['icon']} Overall sentiment: {mood['label']}**")
+                    st.write(feedback)
+                    st.progress((compound + 1) / 2, text=f"Sentiment score: {compound:+.2f}")
 
-    # Immediate Breakdown Output
-    if st.session_state.last_analysis:
-        res = st.session_state.last_analysis
-        st.markdown("---")
-        
-        st.subheader("🎯 Résultat de l'analyse enrichie")
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Tonalité générale", f"{res['emoji']} {res['category']}")
-        m2.metric("Score de sentiment", f"{res['compound']:.2f}")
-        m3.metric("Émotion dominante", res["emotion"])
+                    text = normalize_text(user_input.lower())
+                    for emotion, words in emotion_keywords.items():
+                        if any(w in text for w in words):
+                            st.caption(f"Dominant emotion detected: **{emotion.capitalize()}**")
+                            break
 
-        gauge_val = float((res["compound"] + 1) / 2)
-        st.progress(gauge_val)
-        st.caption("Polarité émotionnelle (-1.0 Très Négatif ↔ +1.0 Très Positif)")
+                plan_data = action_plans[mood_key]
+                st.session_state.plan = random.choice(plan_data["plan"])
+                
+                sample_count = min(3, len(plan_data["activities"]))
+                st.session_state.activities = random.sample(plan_data["activities"], sample_count)
 
-    # Tabs for History & Analytics
-    st.markdown("---")
-    tab_analytics, tab_history = st.tabs(["📊 Graphiques & Tendances", "📜 Journal & Filtres"])
-
-    with tab_analytics:
-        if st.session_state.history:
-            df_hist = pd.DataFrame(st.session_state.history)
-
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Total Entrées", len(df_hist))
-            c2.metric("Positives", len(df_hist[df_hist["category"] == "Positif"]))
-            c3.metric("Neutres", len(df_hist[df_hist["category"] == "Neutre"]))
-            c4.metric("Négatives", len(df_hist[df_hist["category"] == "Négatif"]))
-
-            st.write("")
-
-            fig = px.pie(
-                df_hist,
-                names="category",
-                title="Répartition des humeurs enregistrées",
-                color="category",
-                color_discrete_map={
-                    "Positif": "#10B981",
-                    "Neutre": "#9CA3AF",
-                    "Négatif": "#EF4444",
-                },
-                hole=0.4,
-            )
-            fig.update_layout(
-                margin=dict(t=40, b=0, l=0, r=0),
-                height=260,
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="gray"),
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("Aucune donnée enregistrée pour le moment.")
-
-    with tab_history:
-        if st.session_state.history:
-            f_col1, f_col2 = st.columns([2, 1])
-            with f_col1:
-                search_query = st.text_input("🔍 Rechercher un mot-clé", placeholder="Ex: triste, fatigue...")
-            with f_col2:
-                category_filter = st.selectbox("Filtrer par catégorie", ["Toutes", "Positif", "Neutre", "Négatif"])
-
-            filtered_history = st.session_state.history
-            if category_filter != "Toutes":
-                filtered_history = [h for h in filtered_history if h["category"] == category_filter]
-            if search_query.strip():
-                filtered_history = [h for h in filtered_history if search_query.lower() in h["text"].lower()]
-
-            t_col1, t_col2 = st.columns([1, 1])
-            with t_col1:
-                df_export = pd.DataFrame(st.session_state.history)[["time", "category", "compound", "emotion", "text"]]
-                st.download_button(
-                    label="📥 Exporter en CSV",
-                    data=df_export.to_csv(index=False),
-                    file_name="mindtalk_journal.csv",
-                    mime="text/csv",
-                    use_container_width=True,
+                st.session_state.history.append(
+                    {
+                        "text": user_input,
+                        "category": mood["label"],
+                        "mood_key": mood_key,
+                        "feedback": feedback,
+                        "compound": compound,
+                        "time": timestamp,
+                    }
                 )
-            with t_col2:
-                if st.button("🗑️ Effacer le journal", use_container_width=True):
-                    st.session_state.history.clear()
-                    st.session_state.last_analysis = None
-                    st.toast("Historique réinitialisé !", icon="🧹")
+
+                if auto_clear:
+                    st.session_state.user_input_val = ""
                     st.rerun()
 
-            st.write("")
-            if filtered_history:
-                for entry in reversed(filtered_history[-5:]):
-                    st.markdown(
-                        f"""
-                        <div class="history-card">
-                            <small style="opacity: 0.7;">{entry['time']} | Émotion : <b>{entry['emotion']}</b></small><br>
-                            <span style="font-size: 1.05rem;">{entry['emoji']} <b>{entry['category']}</b> (Score : {entry['compound']:.2f})</span>
-                            <p style="margin-top: 5px; margin-bottom: 0px;">"{entry['text']}"</p>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-            else:
-                st.warning("Aucun résultat ne correspond à vos filtres.")
-        else:
-            st.info("Le journal d'historique est actuellement vide.")
+            except Exception:
+                st.error("Something went wrong during the analysis.", icon=":material/error:")
 
-# --------------------------------------------------
-# 6. Sidebar Guidance & Checklist
-# --------------------------------------------------
-with side_col:
-    st.subheader("🧭 Plan d'action interactif")
+    # ---------------- Statistics & History (With Graph) ----------------
+    if st.session_state.history:
+        history = st.session_state.history
 
-    if st.session_state.last_analysis:
-        res = st.session_state.last_analysis
+        st.divider()
+        st.subheader("Overview", anchor=False)
 
-        st.markdown(
-            f"""
-            <div class="custom-card">
-                <h4 style="margin-top: 0; color: #818CF8;">💡 État d'esprit recommandé</h4>
-                <p style="font-size: 0.95rem; margin-bottom: 0;">{res['plan']}</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        counts = {k: sum(h["mood_key"] == k for h in history) for k in MOODS}
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Positive", counts["positive"])
+        m2.metric("Neutral", counts["neutral"])
+        m3.metric("Negative", counts["negative"])
 
-        st.markdown("### 🎯 To-Do bien-être")
-        st.caption("Cochez les activités au fur et à mesure :")
-
-        for idx, act in enumerate(res["activities"]):
-            act_key = f"act_{res['id']}_{idx}"
-            is_checked = act_key in st.session_state.completed_activities
-            
-            if st.checkbox(act, value=is_checked, key=act_key):
-                if act_key not in st.session_state.completed_activities:
-                    st.session_state.completed_activities.add(act_key)
-                    st.toast(f"Bravo ! Activité faite : {act}", icon="🎉")
-            else:
-                st.session_state.completed_activities.discard(act_key)
-
-        completed_count = sum(1 for idx in range(len(res["activities"])) if f"act_{res['id']}_{idx}" in st.session_state.completed_activities)
-        total_count = len(res["activities"])
+        # Interactive Graph Representation
         st.write("")
-        st.progress(completed_count / total_count if total_count > 0 else 0)
-        st.caption(f"Progression : {completed_count}/{total_count} activité(s)")
+        df_chart = pd.DataFrame(history)
+        df_chart["Entry"] = range(1, len(df_chart) + 1)
 
-    else:
-        st.markdown(
-            """
-            <div class="custom-card" style="text-align: center; opacity: 0.8;">
-                <p style="margin-bottom: 0;">Analysez votre humeur pour débloquer votre plan d'action interactif.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
+        fig = px.line(
+            df_chart,
+            x="Entry",
+            y="compound",
+            markers=True,
+            title="Sentiment Progression Curve",
+            labels={"compound": "Sentiment Score", "Entry": "Check-in Index"},
+            color_discrete_sequence=[ACCENT],
         )
+        fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.5)
+        fig.update_layout(
+            margin=dict(t=30, b=10, l=10, r=10),
+            height=220,
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+        )
+        
+        with st.container(border=True):
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+        st.subheader("Recent entries", anchor=False)
+
+        for entry in reversed(history[-5:]):
+            mood = MOODS[entry["mood_key"]]
+            safe_text = entry["text"].replace("<", "&lt;").replace(">", "&gt;")
+            st.markdown(
+                f"""
+                <div class="mt-entry" style="border-left-color:{mood['color']};">
+                    <span class="mt-badge" style="background:{mood['color']};">{entry['category']}</span>
+                    <span class="meta">&nbsp;{entry['time']}</span>
+                    <div style="margin-top:0.4rem;">{safe_text}</div>
+                    <div class="meta" style="margin-top:0.3rem;">{entry['feedback']}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+# ==================================================
+# RIGHT COLUMN
+# ==================================================
+with side_col:
+    st.subheader("Recommendations", anchor=False)
+
+    if st.session_state.plan:
+        st.markdown("**Suggested focus**")
+        st.markdown(f"<div class='mt-plan'>{st.session_state.plan}</div>", unsafe_allow_html=True)
+
+        st.markdown("&nbsp;")
+        st.markdown("**Suggested activities**")
+        for icon, label in st.session_state.activities:
+            with st.container(border=True):
+                st.markdown(f":material/{icon}: &nbsp; {label}")
+    else:
+        st.info("Run an analysis to receive tailored suggestions.", icon=":material/info:")
+
+    st.markdown(
+        "<div class='mt-note'>MindTalk is a self-reflection tool. It does not provide medical "
+        "advice or diagnosis. If you are struggling, please consider speaking with a professional.</div>",
+        unsafe_allow_html=True,
+    )
